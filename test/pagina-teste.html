@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="resumir-pagina-teste" content="1">
+<title>Página de teste do Resumir página</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; }
+  nav, footer { color: #777; font-size: 13px; }
+  .oculto { display: none; }
+</style>
+</head>
+<body>
+<!--
+  Página de teste: roda o userscript fora do Tampermonkey, com GM_* simulados.
+  As chamadas às APIs são falsas (nada sai do computador e nada é cobrado):
+  o simulador responde no formato de streaming de cada provedor.
+  Sirva a pasta do projeto por HTTP (ex.: python -m http.server 8765) e abra
+  http://127.0.0.1:8765/test/pagina-teste.html. Aperte Alt+R.
+  Chave "erro" num provedor simula uma chave recusada (401).
+-->
+<nav>Início · Notícias · Contato</nav>
+<main>
+  <article>
+    <h1>Tribunal adota novo sistema de distribuição de processos</h1>
+    <p>O tribunal anunciou nesta segunda-feira, 3 de novembro de 2026, que a partir de janeiro todos os processos novos serão distribuídos por um sistema eletrônico que sorteia o relator entre os gabinetes com menor acervo.</p>
+    <p>Segundo a presidência, a mudança deve reduzir em 18% o tempo médio até a primeira decisão. O sistema foi testado durante seis meses em duas turmas, com 4.215 processos distribuídos sem falhas.</p>
+    <p class="oculto">ESTE TEXTO ESTÁ OCULTO E NÃO DEVE SER ENVIADO.</p>
+    <h2>Críticas</h2>
+    <p>A associação dos advogados pediu que os critérios do sorteio sejam publicados, para permitir auditoria externa. A presidência respondeu que o código-fonte será disponibilizado no portal da transparência.</p>
+    <comentario-web></comentario-web>
+  </article>
+</main>
+<iframe id="quadro" style="width:100%;height:120px;border:1px solid #ccc"></iframe>
+<footer>Rodapé do site.</footer>
+
+<script>
+  // Componente com ShadowRoot aberto (como o Reddit novo usa).
+  customElements.define('comentario-web', class extends HTMLElement {
+    constructor() {
+      super();
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = '<div><p><b>Comentário de leitor:</b> TEXTO DENTRO DO SHADOW DOM — achei a medida positiva, desde que haja auditoria.</p><slot></slot></div>';
+    }
+  });
+  // Iframe da mesma origem.
+  document.getElementById('quadro').srcdoc =
+    '<p>TEXTO DENTRO DO IFRAME: Nota da assessoria. O novo sistema entra em vigor em 7 de janeiro de 2027 e vale para todas as classes processuais, exceto habeas corpus, que continuam com distribuição por prevenção quando houver.</p>';
+</script>
+
+<script>
+  // Só nos testes: guarda o ShadowRoot fechado do painel em window.__painel,
+  // para os testes automáticos conseguirem clicar nos botões.
+  const attachOriginal = Element.prototype.attachShadow;
+  Element.prototype.attachShadow = function (opcoes) {
+    const r = attachOriginal.call(this, opcoes);
+    if (this.hasAttribute('data-resumir-pagina')) window.__painel = r;
+    return r;
+  };
+
+  // ---------------- GM_* simulados ----------------
+  const ARMAZEM = 'rp-teste:';
+  window.GM_getValue = (k, padrao) => { const v = localStorage.getItem(ARMAZEM + k); return v === null ? padrao : v; };
+  window.GM_setValue = (k, v) => localStorage.setItem(ARMAZEM + k, v);
+  window.GM_setClipboard = (t) => { window.__copiado = t; };
+  window.GM_registerMenuCommand = () => {};
+  if (!localStorage.getItem(ARMAZEM + 'config')) {
+    GM_setValue('config', JSON.stringify({ chaves: { anthropic: 'teste', openai: 'teste', gemini: 'teste', deepseek: 'teste' } }));
+  }
+
+  const RESPOSTA_MD =
+    'A notícia trata da **adoção de um sistema eletrônico** de distribuição de processos.\n\n' +
+    '## Pontos principais\n\n' +
+    '- Começa em janeiro; sorteia o relator entre gabinetes com menor acervo.\n' +
+    '- Meta: reduzir em **18%** o tempo até a primeira decisão.\n' +
+    '- Teste de seis meses: 4.215 processos, sem falhas.\n\n' +
+    '| Item | Valor |\n|---|---|\n| Redução esperada | 18% |\n| Processos no teste | 4.215 |\n\n' +
+    '> A OAB pediu publicação dos critérios. `código-fonte` será aberto.\n\n' +
+    '<img src="https://exemplo.invalid/vazar.png"> <script>alert(1)<\/script> [link seguro](https://example.com)';
+
+  function pedacos(texto, n) {
+    const out = []; for (let i = 0; i < texto.length; i += n) out.push(texto.slice(i, i + n)); return out;
+  }
+  function sse(provedor, texto) {
+    const linhas = [];
+    if (provedor === 'anthropic') {
+      linhas.push('event: message_start\ndata: {"type":"message_start","message":{"id":"msg_x"}}\n');
+      linhas.push('event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}\n');
+      linhas.push('event: content_block_delta\ndata: ' + JSON.stringify({ type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: 'NAO MOSTRAR' } }) + '\n');
+      for (const p of pedacos(texto, 17)) linhas.push('event: content_block_delta\ndata: ' + JSON.stringify({ type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: p } }) + '\n');
+      linhas.push('event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}\n');
+      linhas.push('event: message_stop\ndata: {"type":"message_stop"}\n');
+    } else if (provedor === 'gemini') {
+      linhas.push('data: ' + JSON.stringify({ candidates: [{ content: { parts: [{ text: 'NAO MOSTRAR', thought: true }] } }] }) + '\n');
+      for (const p of pedacos(texto, 23)) linhas.push('data: ' + JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ text: p }] } }] }) + '\n');
+      linhas.push('data: ' + JSON.stringify({ candidates: [{ content: { parts: [{ text: '' }] }, finishReason: 'STOP' }] }) + '\n');
+    } else {
+      for (const p of pedacos(texto, 19)) linhas.push('data: ' + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: null }] }) + '\n');
+      linhas.push('data: ' + JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }) + '\n');
+      linhas.push('data: [DONE]\n');
+    }
+    return linhas.join('\n');
+  }
+
+  window.__pedidos = [];
+  window.GM_xmlhttpRequest = (o) => {
+    const provedor = /anthropic/.test(o.url) ? 'anthropic' : /openai/.test(o.url) ? 'openai' : /googleapis/.test(o.url) ? 'gemini' : 'deepseek';
+    const h = o.headers || {};
+    const chave = h['x-api-key'] || h['x-goog-api-key'] || (h.authorization || '').replace('Bearer ', '');
+    window.__pedidos.push({ provedor, url: o.url, method: o.method, headers: h, body: o.data ? JSON.parse(o.data) : null });
+    let abortado = false;
+    const tempos = [];
+    const responder = (status, corpo, aos) => {
+      const partes = aos ? pedacos(corpo, aos) : [corpo];
+      let acumulado = '';
+      partes.forEach((p, i) => tempos.push(setTimeout(() => {
+        if (abortado) return;
+        acumulado += p;
+        if (i < partes.length - 1) o.onprogress && o.onprogress({ status, responseText: acumulado });
+        else o.onload && o.onload({ status, responseText: acumulado });
+      }, 15 * (i + 1))));
+    };
+    setTimeout(() => {
+      if (chave === 'erro') return responder(401, JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }));
+      if (o.method === 'GET') {
+        const ids = { anthropic: { data: [{ id: 'claude-opus-5-5' }, { id: 'claude-haiku-5-5' }] },
+          openai: { data: [{ id: 'gpt-5-mini' }, { id: 'gpt-5' }, { id: 'tts-1' }] },
+          deepseek: { data: [{ id: 'deepseek-v4-flash' }, { id: 'deepseek-v4-pro' }] },
+          gemini: { models: [{ name: 'models/gemini-flash-latest', supportedGenerationMethods: ['generateContent'] }, { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] }] } };
+        return responder(200, JSON.stringify(ids[provedor]));
+      }
+      const texto = (window.__pedidos.filter(p => p.method === 'POST').length > 1)
+        ? `Resposta do seguimento (${provedor}): sim, **funciona**.`
+        : RESPOSTA_MD.replace('A notícia', `[${provedor}] A notícia`);
+      responder(200, sse(provedor, texto), 120);
+    }, 30);
+    return { abort() { abortado = true; tempos.forEach(clearTimeout); o.onabort && o.onabort(); } };
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="../resumir-pagina.user.js"></script>
+</body>
+</html>
