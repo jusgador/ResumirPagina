@@ -1,11 +1,15 @@
 // ==UserScript==
 // @name         Resumir página com IA
 // @namespace    jusgador.resumir-pagina
-// @version      0.1.1
+// @version      0.1.2
 // @description  Alt+R resume a página aberta (ou o trecho selecionado) pela API da Anthropic, OpenAI, Gemini ou DeepSeek, num painel lateral com Markdown, temas claro/sépia/escuro, ajuste de fonte, modo leitura e perguntas sobre a página. Nada aparece na página até você apertar o atalho.
 // @author       Ricardo
 // @match        *://*/*
 // @match        file:///*
+// @exclude      *://pje*.jus.br/*
+// @exclude      *://*.pje.jus.br/*
+// @exclude      *://frontend-prd.trf5.jus.br/*
+// @exclude      *://*.cnj.cloud/*
 // @noframes
 // @run-at       document-idle
 // @require      https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js

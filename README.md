@@ -96,7 +96,8 @@ A instrução de sistema diz à IA que o conteúdo da página é só dado, para 
 
 - Não roda em `about:`, na loja de extensões nem no visualizador de PDF do Firefox (o navegador não deixa userscripts entrarem nelas).
 - Não lê iframes de outra origem, ShadowRoots fechados nem conteúdo desenhado em `<canvas>`.
-- Se um site usar Alt+R para algo próprio, o script tem prioridade enquanto estiver ativo.
+- **Não roda no PJe** (`pje*.jus.br`, `*.pje.jus.br`, `frontend-prd.trf5.jus.br` e `*.cnj.cloud`), para não brigar com o Alt+R da extensão PJe Sem Firulas, que expande o editor de minutas. Os demais sites `.jus.br`, como os de jurisprudência, continuam com o resumo.
+- Em outros sites que usem Alt+R para algo próprio, o script tem prioridade enquanto estiver ativo.
 - Usa duas bibliotecas por `@require`, com versão fixa: [marked](https://marked.js.org/) 12.0.2 (Markdown) e [DOMPurify](https://github.com/cure53/DOMPurify) 3.1.6 (limpeza do HTML). O Tampermonkey as baixa uma vez, na instalação.
 
 ## Desenvolvimento
