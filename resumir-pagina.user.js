@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Resumir página com IA
 // @namespace    jusgador.resumir-pagina
-// @version      0.1.0
+// @version      0.1.1
 // @description  Alt+R resume a página aberta (ou o trecho selecionado) pela API da Anthropic, OpenAI, Gemini ou DeepSeek, num painel lateral com Markdown, temas claro/sépia/escuro, ajuste de fonte, modo leitura e perguntas sobre a página. Nada aparece na página até você apertar o atalho.
 // @author       Ricardo
 // @match        *://*/*
@@ -50,20 +50,20 @@
     const PROVEDORES = {
         anthropic: {
             nome: 'Anthropic (Claude)',
-            modeloPadrao: 'claude-opus-5-5',
-            sugestoes: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'],
+            modeloPadrao: 'claude-haiku-5-5',
+            sugestoes: ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'],
             ondeChave: 'https://console.anthropic.com/settings/keys',
         },
         openai: {
             nome: 'OpenAI (GPT)',
             modeloPadrao: 'gpt-5-mini',
-            sugestoes: ['gpt-5-mini', 'gpt-5', 'gpt-4.1-nano'],
+            sugestoes: ['gpt-5-mini', 'gpt-5-nano', 'gpt-5'],
             ondeChave: 'https://platform.openai.com/api-keys',
         },
         gemini: {
             nome: 'Google (Gemini)',
-            modeloPadrao: 'gemini-flash-latest',
-            sugestoes: ['gemini-flash-latest', 'gemini-pro-latest', 'gemini-flash-lite-latest'],
+            modeloPadrao: 'gemini-flash-lite-latest',
+            sugestoes: ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-pro-latest'],
             ondeChave: 'https://aistudio.google.com/apikey',
         },
         deepseek: {
@@ -93,6 +93,11 @@
     const TEMAS = ['claro', 'sepia', 'escuro'];
     const NOME_TEMA = { claro: 'Claro', sepia: 'Sépia', escuro: 'Escuro' };
 
+    // Padrões de modelo antes da versão 2: quem ainda estiver neles passa
+    // para os padrões atuais (mais baratos). Escolhas próprias ficam.
+    const VERSAO_PADROES = 2;
+    const PADROES_ANTIGOS = { anthropic: ['claude-opus-5-5'], gemini: ['gemini-flash-latest'] };
+
     const PADRAO = {
         provedor: 'anthropic',
         chaves: { anthropic: '', openai: '', gemini: '', deepseek: '' },
@@ -108,11 +113,18 @@
     function lerConfig() {
         let salvo = {};
         try { salvo = JSON.parse(GM_getValue('config', '{}')) || {}; } catch (e) { salvo = {}; }
+        const modelos = { ...PADRAO.modelos, ...(salvo.modelos || {}) };
+        if ((salvo.versaoPadroes || 1) < VERSAO_PADROES) {
+            for (const [id, antigos] of Object.entries(PADROES_ANTIGOS)) {
+                if (antigos.includes(modelos[id])) modelos[id] = PADRAO.modelos[id];
+            }
+        }
         return {
             ...PADRAO,
             ...salvo,
+            versaoPadroes: VERSAO_PADROES,
             chaves: { ...PADRAO.chaves, ...(salvo.chaves || {}) },
-            modelos: { ...PADRAO.modelos, ...(salvo.modelos || {}) },
+            modelos,
         };
     }
     // Grava e confere lendo de volta. Devolve '' se deu certo, ou a mensagem de erro.

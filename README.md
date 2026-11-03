@@ -60,12 +60,16 @@ Ao reabrir com Alt+R na mesma página, o último resumo volta sem nova chamada. 
 
 ## Modelos padrão
 
-| Provedor | Padrão | Observação |
+Os padrões são os modelos baratos de cada provedor que ainda resumem bem. Para páginas difíceis (textos técnicos longos, discussões com muitas vozes), troque em ⚙ por um modelo maior.
+
+| Provedor | Padrão | Mais capaz (e mais caro) |
 |---|---|---|
-| Anthropic | `claude-opus-5-5` | Enviado com esforço baixo (`effort: low`). Para gastar bem menos, use `claude-haiku-5-5`. |
-| OpenAI | `gpt-5-mini` | Com `reasoning_effort: low`. |
-| Gemini | `gemini-flash-latest` | Apelido que aponta sempre para o Flash mais recente. |
-| DeepSeek | `deepseek-v4-flash` | |
+| Anthropic | `claude-haiku-5-5`, com esforço baixo (`effort: low`) | `claude-sonnet-5-5`, `claude-opus-5-5` |
+| OpenAI | `gpt-5-mini`, com `reasoning_effort: low` | `gpt-5`; o `gpt-5-nano` é ainda mais barato, mas mais fraco |
+| Gemini | `gemini-flash-lite-latest`, apelido do Flash-Lite mais recente | `gemini-flash-latest`, `gemini-pro-latest` |
+| DeepSeek | `deepseek-v4-flash` | `deepseek-v4-pro` |
+
+Quem instalou a 0.1.0 e ficou nos padrões antigos (`claude-opus-5-5`, `gemini-flash-latest`) passa sozinho para os novos. Um modelo escolhido à mão não é trocado.
 
 Os nomes de modelo mudam com o tempo. Se der "modelo não encontrado", use **Listar modelos** em ⚙.
 
@@ -73,7 +77,7 @@ Os nomes de modelo mudam com o tempo. Se der "modelo não encontrado", use **Lis
 
 Uma página comum dá de 2 mil a 15 mil tokens de entrada (cerca de 4 caracteres por token); o painel mostra quantos caracteres foram enviados. Preços da Anthropic em outubro de 2026, por milhão de tokens (entrada / saída):
 
-- `claude-haiku-5-5`: US$ 0,10 / 0,50. Um resumo sai por menos de um décimo de centavo de dólar.
+- `claude-haiku-5-5` (padrão): US$ 0,10 / 0,50. Um resumo sai por menos de um décimo de centavo de dólar.
 - `claude-sonnet-5-5`: US$ 2 / 10.
 - `claude-opus-5-5`: US$ 4 / 20. Alguns centavos de dólar por resumo.
 
