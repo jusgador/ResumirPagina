@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Resumir página com IA
 // @namespace    jusgador.resumir-pagina
-// @version      0.2.0
+// @version      0.2.1
 // @description  Alt+R resume a página aberta (ou o trecho selecionado) pela API da Anthropic, OpenAI, Gemini ou DeepSeek, num painel lateral com Markdown, temas claro/sépia/escuro, ajuste de fonte, modo leitura e perguntas sobre a página. Nada aparece na página até você apertar o atalho.
 // @author       Ricardo
 // @match        *://*/*
@@ -120,8 +120,12 @@
     }
 
     function suportaBusca(provedor) { return !!PROVEDORES[provedor].buscaNaWeb; }
+    // O nível vale por conversa: começa no configurado (nivelAposResumo) a
+    // cada resumo, e os botões o mudam só para aquela página.
     function nivelEfetivo(provedor) {
-        return cfg.nivel === 'web' && !suportaBusca(provedor) ? 'conhecimento' : (NIVEIS[cfg.nivel] ? cfg.nivel : 'conhecimento');
+        let n = (estado && estado.nivel) || cfg.nivelAposResumo;
+        if (!NIVEIS[n]) n = 'conhecimento';
+        return n === 'web' && !suportaBusca(provedor) ? 'conhecimento' : n;
     }
 
     // 'closed': os scripts do site não alcançam o painel. Só para depurar use 'open'.
@@ -149,7 +153,7 @@
         tema: 'sepia',
         leitura: false,
         largura: 460,
-        nivel: 'conhecimento',
+        nivelAposResumo: 'conhecimento',
     };
 
     function lerConfig() {
@@ -163,6 +167,9 @@
                 if (m[id] && m[id].includes(modelos[id])) modelos[id] = PADRAO.modelos[id];
             }
         }
+        // 0.2.0 guardava o último nível escolhido em "nivel".
+        if (!salvo.nivelAposResumo && NIVEIS[salvo.nivel]) salvo.nivelAposResumo = salvo.nivel;
+        delete salvo.nivel;
         return {
             ...PADRAO,
             ...salvo,
@@ -739,6 +746,7 @@ select { padding: 3px 4px; max-width: 150px; }
 .rp-config h2 { font-size: 15px; margin: 0 0 10px; }
 .rp-config fieldset { border: 1px solid var(--borda); border-radius: 8px; margin: 0 0 12px; padding: 8px 10px 10px; }
 .rp-config legend { font-weight: 600; padding: 0 4px; }
+.rp-config label.rp-opcao { color: var(--texto); display: flex; gap: 6px; align-items: baseline; margin: 5px 0; cursor: pointer; }
 .rp-config label { display: block; margin: 6px 0 3px; color: var(--suave); }
 .rp-config input[type="text"], .rp-config input[type="number"], .rp-config input[type="password"], .rp-config textarea {
     width: 100%; font: inherit; color: var(--texto); background: var(--botao);
@@ -867,7 +875,7 @@ select { padding: 3px 4px; max-width: 150px; }
             h('span', { class: 'rp-niveis-rotulo', text: 'Responder com:' }),
             Object.entries(NIVEIS).map(([id, n]) => (ui.botoesNivel[id] = h('button', {
                 class: 'rp-nivel', title: n.dica, text: n.rotulo,
-                onclick: () => { cfg.nivel = id; salvarConfig(); atualizarNiveis(); },
+                onclick: () => { estado.nivel = id; atualizarNiveis(); },
             }))));
         ui.formulario = h('div', { class: 'rp-formulario' },
             ui.niveis,
@@ -1148,9 +1156,11 @@ select { padding: 3px 4px; max-width: 150px; }
         estado = {
             url: location.href,
             extracao: { origem, total: texto.length, cortado },
+            nivel: cfg.nivelAposResumo,
             conversa: [{ papel: 'user', texto: `${cfg.instrucao.trim() || INSTRUCAO_PADRAO}\n\n${cabecalho}\n\n<pagina>\n${usado}\n</pagina>` }],
         };
         ui.rolagem.scrollTop = 0;
+        atualizarNiveis();
         responder();
     }
 
@@ -1318,6 +1328,17 @@ select { padding: 3px 4px; max-width: 150px; }
                 h('label', { text: 'Máximo de caracteres da página enviados (o excesso é cortado, com aviso)' }),
                 campoMax,
                 h('p', { class: 'rp-nota', text: 'Como referência, 4 caracteres equivalem a cerca de 1 token.' }),
+            ),
+            h('fieldset', {},
+                h('legend', { text: 'Perguntas' }),
+                h('label', { text: 'Depois de cada resumo, deixar marcado:' }),
+                Object.entries(NIVEIS).map(([id, n]) => {
+                    const radio = h('input', { type: 'radio', name: 'rp-nivel-apos', value: id,
+                        onchange: () => { rascunho.nivelAposResumo = id; } });
+                    radio.checked = (rascunho.nivelAposResumo || 'conhecimento') === id;
+                    return h('label', { class: 'rp-opcao' }, radio, ' ' + n.rotulo + ' — ' + n.dica.charAt(0).toLowerCase() + n.dica.slice(1));
+                }),
+                h('p', { class: 'rp-nota', text: 'Durante a conversa, os botões acima do campo de pergunta mudam o nível só daquela página. + Web, por enquanto, só funciona com a DeepSeek; nos outros provedores vale + Conhecimento.' }),
             ),
             h('div', { class: 'rp-acoes' },
                 h('button', { class: 'rp-primario', text: 'Salvar', onclick: () => {

@@ -56,16 +56,18 @@ As chaves ficam no armazenamento do Tampermonkey, neste navegador (fora do alcan
 | Copiar | **Copiar** copia a conversa em Markdown |
 | Fechar | **Esc**, **✕** ou **Alt+R** de novo |
 
-Ao reabrir com Alt+R na mesma página, o último resumo volta sem nova chamada. Fonte, tema, modo leitura, largura e o nível das perguntas ficam salvos.
+Ao reabrir com Alt+R na mesma página, o último resumo volta sem nova chamada. Fonte, tema, modo leitura e largura ficam salvos.
 
 ## Perguntas: só a página, conhecimento ou web
 
 Acima do campo de pergunta, **Responder com:** escolhe as fontes das perguntas. O resumo inicial é sempre só da página.
 
+Os níveis são cumulativos: **+ Web** já inclui o conhecimento do modelo. Em ⚙ → **Perguntas**, escolha qual nível vem marcado depois de cada resumo (padrão: **+ Conhecimento**). Durante a conversa, os botões mudam o nível só daquela página; o próximo resumo volta ao configurado.
+
 | Nível | O que faz | Custo extra |
 |---|---|---|
 | **Só a página** | Responde apenas com o que está na página; se não estiver, diz que não está | nenhum |
-| **+ Conhecimento** (padrão) | Usa a página e completa com o conhecimento do próprio modelo, numa seção "Além da página". O modelo tem data de corte e pode estar desatualizado | nenhum |
+| **+ Conhecimento** | Usa a página e completa com o conhecimento do próprio modelo, numa seção "Além da página". O modelo tem data de corte e pode estar desatualizado | nenhum |
 | **+ Web** | Também pesquisa na web quando a pergunta pede informação atual ou que não está na página. As fontes vêm em links, numa seção "Na web", e as buscas feitas aparecem no fim da resposta | por busca (veja abaixo) |
 
 Por enquanto, a pesquisa na web só funciona com a **DeepSeek**; nos outros provedores o botão **+ Web** fica desativado.
