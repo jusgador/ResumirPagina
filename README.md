@@ -56,7 +56,21 @@ As chaves ficam no armazenamento do Tampermonkey, neste navegador (fora do alcan
 | Copiar | **Copiar** copia a conversa em Markdown |
 | Fechar | **Esc**, **✕** ou **Alt+R** de novo |
 
-Ao reabrir com Alt+R na mesma página, o último resumo volta sem nova chamada. Fonte, tema, modo leitura e largura ficam salvos.
+Ao reabrir com Alt+R na mesma página, o último resumo volta sem nova chamada. Fonte, tema, modo leitura, largura e o nível das perguntas ficam salvos.
+
+## Perguntas: só a página, conhecimento ou web
+
+Acima do campo de pergunta, **Responder com:** escolhe as fontes das perguntas. O resumo inicial é sempre só da página.
+
+| Nível | O que faz | Custo extra |
+|---|---|---|
+| **Só a página** | Responde apenas com o que está na página; se não estiver, diz que não está | nenhum |
+| **+ Conhecimento** (padrão) | Usa a página e completa com o conhecimento do próprio modelo, numa seção "Além da página". O modelo tem data de corte e pode estar desatualizado | nenhum |
+| **+ Web** | Também pesquisa na web quando a pergunta pede informação atual ou que não está na página. As fontes vêm em links, numa seção "Na web", e as buscas feitas aparecem no fim da resposta | por busca (veja abaixo) |
+
+Por enquanto, a pesquisa na web só funciona com a **DeepSeek**; nos outros provedores o botão **+ Web** fica desativado.
+
+Como funciona com a DeepSeek: o script oferece ao modelo uma função `pesquisar_web`. Quando o modelo a chama, o script consulta o endpoint de busca da DeepSeek (`/v1/tools/search`), devolve até 6 resultados (título, URL, site, data e resumo) e o modelo continua a resposta. São no máximo **3 buscas por pergunta**. A busca custa US$ 0,75 por 1.000 (preço de novembro de 2026), e buscas que falham ou não acham nada não são cobradas. Os resultados entram como tokens de entrada.
 
 ## Modelos padrão
 
@@ -67,9 +81,11 @@ Os padrões são os modelos baratos de cada provedor que ainda resumem bem. Para
 | Anthropic | `claude-haiku-5-5`, com esforço baixo (`effort: low`) | `claude-sonnet-5-5`, `claude-opus-5-5` |
 | OpenAI | `gpt-5-mini`, com `reasoning_effort: low` | `gpt-5`; o `gpt-5-nano` é ainda mais barato, mas mais fraco |
 | Gemini | `gemini-flash-lite-latest`, apelido do Flash-Lite mais recente | `gemini-flash-latest`, `gemini-pro-latest` |
-| DeepSeek | `deepseek-v4-flash` | `deepseek-v4-pro` |
+| DeepSeek | `deepseek-flash`, com o raciocínio desligado | `deepseek-v4-pro` |
 
-Quem instalou a 0.1.0 e ficou nos padrões antigos (`claude-opus-5-5`, `gemini-flash-latest`) passa sozinho para os novos. Um modelo escolhido à mão não é trocado.
+Quem ficou nos padrões antigos passa sozinho para os novos: `claude-opus-5-5` e `gemini-flash-latest` (da 0.1.0) e `deepseek-v4-flash` (nome antigo, até a 0.1.2). Um modelo escolhido à mão não é trocado.
+
+Na DeepSeek, o raciocínio vem ligado em nível alto se nada for pedido. O script o desliga, porque para resumo e perguntas isso só deixa a resposta mais lenta e cara.
 
 Os nomes de modelo mudam com o tempo. Se der "modelo não encontrado", use **Listar modelos** em ⚙.
 
@@ -80,6 +96,8 @@ Uma página comum dá de 2 mil a 15 mil tokens de entrada (cerca de 4 caracteres
 - `claude-haiku-5-5` (padrão): US$ 0,10 / 0,50. Um resumo sai por menos de um décimo de centavo de dólar.
 - `claude-sonnet-5-5`: US$ 2 / 10.
 - `claude-opus-5-5`: US$ 4 / 20. Alguns centavos de dólar por resumo.
+
+DeepSeek (`deepseek-flash`, novembro de 2026), por milhão de tokens: US$ 0,15 / 0,60 fora do horário de pico e o dobro no pico. O pico vai das 01h às 04h e das 06h às 10h UTC, em dias úteis (22h–01h e 03h–07h em Brasília). Um resumo com uma pergunta e duas buscas na web saiu por menos de um centavo de dólar.
 
 Para os outros provedores, veja a página de preços de cada um.
 
@@ -102,5 +120,6 @@ A instrução de sistema diz à IA que o conteúdo da página é só dado, para 
 
 ## Desenvolvimento
 
-- `test/pagina-teste.html` roda o script fora do Tampermonkey, com `GM_*` simulados e respostas falsas no formato de streaming de cada provedor. Nada sai do computador e nada é cobrado. Sirva a pasta por HTTP e abra `http://127.0.0.1:8765/test/pagina-teste.html`. Uma chave `erro` simula chave recusada (401).
+- `test/pagina-teste.html` roda o script fora do Tampermonkey, com `GM_*` simulados e respostas falsas no formato de streaming de cada provedor. Nada sai do computador e nada é cobrado. Sirva a pasta por HTTP e abra `http://127.0.0.1:8765/test/pagina-teste.html`. Uma chave `erro` simula chave recusada (401). Com a DeepSeek no nível **+ Web**, o simulador pede uma busca (com os argumentos chegando em pedaços, como no streaming real), responde pelo endpoint de busca, inclusive com um link `javascript:` que o painel deve mostrar como texto, e só então dá a resposta final.
+- Com o script instalado no Tampermonkey, a cópia instalada se desliga na página de teste (ela tem `<meta name="resumir-pagina-teste">`), para não haver dois painéis nem chamadas reais.
 - Versões: nenhum número de versão contém 13 (depois de 0.12.x vem 0.14.0; depois de x.y.12 vem x.y.14).
