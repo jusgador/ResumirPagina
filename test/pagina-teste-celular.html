@@ -2,7 +2,13 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // ?semviewport: página "de desktop", sem <meta viewport>. O celular a
+  // desenha a ~980px e a reduz; o painel deve desfazer essa redução.
+  if (!/[?&]semviewport\b/.test(location.search)) {
+    document.write('<meta name="viewport" content="width=device-width, initial-scale=1">');
+  }
+</script>
 <meta name="resumir-pagina-teste" content="1">
 <title>Teste do Resumir página (celular)</title>
 <style>
@@ -19,10 +25,26 @@
   Sirva a pasta do projeto por HTTP (ex.: python -m http.server 8765) e abra
   http://127.0.0.1:8765/test/pagina-teste-celular.html. Toque com 3 dedos.
   No celular, pelo cabo: adb reverse tcp:8765 tcp:8765 e abra o mesmo endereço.
+  ?semviewport simula uma página sem versão para celular. O botão "Abrir
+  painel" chama o mesmo comando do menu do Violentmonkey (útil com adb, que
+  só toca com um dedo).
   Chave "erro" num provedor simula uma chave recusada (401); chave "cair" corta
   a conexão no meio da resposta (como quando o Android suspende o Firefox).
 -->
 <nav>Início · Notícias · Contato</nav>
+<button id="abrir-teste" type="button" style="font-size:16px;padding:10px 16px;margin:8px 0">Abrir painel</button>
+<div id="medidas" style="font: 14px monospace; color: #777"></div>
+<script>
+  // Medidas da área visível, para conferir o painel em capturas de tela.
+  const medir = () => {
+    const v = window.visualViewport;
+    document.getElementById('medidas').textContent = v
+      ? `innerWidth ${innerWidth} · vv ${Math.round(v.width)}×${Math.round(v.height)} · escala ${v.scale.toFixed(2)} · dpr ${devicePixelRatio}`
+      : `innerWidth ${innerWidth} · sem visualViewport`;
+  };
+  medir();
+  if (window.visualViewport) { visualViewport.addEventListener('resize', medir); visualViewport.addEventListener('scroll', medir); }
+</script>
 <main>
   <article>
     <h1>Tribunal adota novo sistema de distribuição de processos</h1>
@@ -66,7 +88,9 @@
   window.GM_getValue = (k, padrao) => { const v = localStorage.getItem(ARMAZEM + k); return v === null ? padrao : v; };
   window.GM_setValue = (k, v) => localStorage.setItem(ARMAZEM + k, v);
   window.GM_setClipboard = (t) => { window.__copiado = t; };
-  window.GM_registerMenuCommand = () => {};
+  window.__menu = [];
+  window.GM_registerMenuCommand = (nome, fn) => { window.__menu.push({ nome, fn }); };
+  document.getElementById('abrir-teste').addEventListener('click', () => window.__menu[0] && window.__menu[0].fn());
   if (!localStorage.getItem(ARMAZEM + 'config')) {
     GM_setValue('config', JSON.stringify({ chaves: { anthropic: 'teste', openai: 'teste', gemini: 'teste', deepseek: 'teste' } }));
   }

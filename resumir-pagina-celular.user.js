@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Resumir página com IA (celular)
 // @namespace    jusgador.resumir-pagina-celular
-// @version      0.1.1
+// @version      0.1.2
 // @description  Toque com 3 dedos para resumir a página aberta (ou o trecho selecionado) pela API da Anthropic, OpenAI, Gemini ou DeepSeek, num painel em tela cheia com Markdown, temas claro/sépia/escuro, ajuste de fonte e perguntas sobre a página. Feito para o Violentmonkey no Firefox Android. Nada aparece na página até o toque.
 // @author       Ricardo
 // @match        *://*/*
@@ -686,7 +686,9 @@
     font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
     overscroll-behavior: none; touch-action: manipulation;
-    -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+    /* Sem o "font inflation" do Firefox Android, que aumenta o texto em
+       páginas sem <meta viewport> e pegaria também o painel. */
+    -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none;
 }
 .rp-painel[data-tema="claro"] {
     --fundo: #ffffff; --texto: #1f2328; --suave: #59636e; --borda: #d0d7de; --botao: #f6f8fa;
