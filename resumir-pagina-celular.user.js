@@ -4,6 +4,7 @@
 // @version      0.1.4
 // @description  Toque com 3 dedos para resumir a página aberta (ou o trecho selecionado) pela API da Anthropic, OpenAI, Gemini ou DeepSeek, num painel em tela cheia com Markdown, temas claro/sépia/escuro, ajuste de fonte e perguntas sobre a página. Feito para o Violentmonkey no Firefox Android. Nada aparece na página até o toque.
 // @author       Ricardo
+// @license      MIT
 // @homepageURL  https://github.com/jusgador/ResumirPagina
 // @supportURL   https://github.com/jusgador/ResumirPagina/issues
 // @updateURL    https://raw.githubusercontent.com/jusgador/ResumirPagina/main/resumir-pagina-celular.user.js

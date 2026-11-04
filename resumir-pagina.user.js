@@ -4,6 +4,7 @@
 // @version      0.2.2
 // @description  Alt+R resume a página aberta (ou o trecho selecionado) pela API da Anthropic, OpenAI, Gemini ou DeepSeek, num painel lateral com Markdown, temas claro/sépia/escuro, ajuste de fonte, modo leitura e perguntas sobre a página. Nada aparece na página até você apertar o atalho.
 // @author       Ricardo
+// @license      MIT
 // @homepageURL  https://github.com/jusgador/ResumirPagina
 // @supportURL   https://github.com/jusgador/ResumirPagina/issues
 // @updateURL    https://raw.githubusercontent.com/jusgador/ResumirPagina/main/resumir-pagina.user.js

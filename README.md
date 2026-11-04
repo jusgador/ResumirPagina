@@ -167,3 +167,7 @@ A página `test/pagina-teste-celular.html` funciona como a do desktop, com `GM_*
 - Com o script instalado no Tampermonkey, a cópia instalada se desliga na página de teste (ela tem `<meta name="resumir-pagina-teste">`), para não haver dois painéis nem chamadas reais.
 - Publicar: o que entra no `main` chega a todos os navegadores instalados quando o `@version` sobe. Teste pela página de teste ou pelo servidor local antes de subir a versão.
 - Versões: nenhum número de versão contém 13 (depois de 0.12.x vem 0.14.0; depois de x.y.12 vem x.y.14).
+
+## Licença
+
+[MIT](LICENSE).
