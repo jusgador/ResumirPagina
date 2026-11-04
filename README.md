@@ -120,6 +120,38 @@ A instrução de sistema diz à IA que o conteúdo da página é só dado, para 
 - Em outros sites que usem Alt+R para algo próprio, o script tem prioridade enquanto estiver ativo.
 - Usa duas bibliotecas por `@require`, com versão fixa: [marked](https://marked.js.org/) 12.0.2 (Markdown) e [DOMPurify](https://github.com/cure53/DOMPurify) 3.1.6 (limpeza do HTML). O Tampermonkey as baixa uma vez, na instalação.
 
+## No celular (Firefox Android)
+
+A versão para celular é outro arquivo, independente: [`resumir-pagina-celular.user.js`](resumir-pagina-celular.user.js), feito para o [Violentmonkey](https://addons.mozilla.org/firefox/addon/violentmonkey/) no Firefox Android. Os dois podem ficar instalados juntos, porque têm nome e namespace diferentes. As chaves e a configuração também ficam separadas.
+
+| Ação | Como |
+|---|---|
+| Resumir a página | toque rápido com **3 dedos** (sem arrastar) |
+| Resumir só um trecho | selecione o texto e toque com 3 dedos |
+| Fechar | **Voltar** do Android, **✕** ou toque com 3 dedos de novo |
+| Perguntar | escreva no campo de baixo e toque em **Enviar** (Enter quebra a linha) |
+| Fonte, tema, leitura, copiar, ⚙ | botão **⋯** |
+| Parar ou refazer o resumo | **■** / **↻** |
+| Resposta cortada (conexão caiu) | **↻ Tentar de novo**, que refaz só o último turno |
+
+Também dá para abrir pelo menu do Violentmonkey (⋮ → Extensões → Violentmonkey → *Resumir esta página*).
+
+O painel ocupa a área visível da tela e acompanha o teclado. Em páginas sem versão para celular, ou com zoom, ele desfaz o zoom para manter o tamanho normal. Se você trocar de app durante uma resposta, o Android pode cortar a conexão; o texto que já chegou fica na tela.
+
+### Instalar e testar pelo cabo USB
+
+1. No celular: em *Opções do desenvolvedor*, ligue a **Depuração USB**. No Firefox, em Configurações, ligue a **Depuração remota via USB**. Instale o Violentmonkey.
+2. No PC, sirva a pasta e ligue a porta do celular à do PC:
+   ```
+   python -m http.server 8765 --bind 127.0.0.1
+   adb reverse tcp:8765 tcp:8765
+   ```
+   O `adb` fica em `%LOCALAPPDATA%\Android\Sdk\platform-tools`. A porta não é exposta na rede: o celular a alcança só pelo cabo.
+3. No Firefox do celular, abra `http://127.0.0.1:8765/resumir-pagina-celular.user.js`. O Violentmonkey mostra a tela de instalação. Para atualizar, abra o mesmo endereço de novo.
+4. Para depurar, use a Firefox Developer Edition no PC: `about:debugging` → conecte o celular por USB → inspecione a aba. O console mostra, a cada resposta, quantos pedaços do streaming chegaram antes do fim (`[Resumir celular] …`). Se for 0, a resposta veio toda de uma vez. No Violentmonkey do Firefox Android, a resposta chega aos poucos (conferido em novembro de 2026, num Galaxy S23 Ultra).
+
+A página `test/pagina-teste-celular.html` funciona como a do desktop, com `GM_*` simulados: `http://127.0.0.1:8765/test/pagina-teste-celular.html`, no PC ou no celular. Uma chave `cair` simula a conexão caindo no meio da resposta.
+
 ## Desenvolvimento
 
 - `test/pagina-teste.html` roda o script fora do Tampermonkey, com `GM_*` simulados e respostas falsas no formato de streaming de cada provedor. Nada sai do computador e nada é cobrado. Sirva a pasta por HTTP e abra `http://127.0.0.1:8765/test/pagina-teste.html`. Uma chave `erro` simula chave recusada (401). Com a DeepSeek no nível **+ Web**, o simulador pede uma busca (com os argumentos chegando em pedaços, como no streaming real), responde pelo endpoint de busca, inclusive com um link `javascript:` que o painel deve mostrar como texto, e só então dá a resposta final.
