@@ -13,8 +13,15 @@ Este script lê o texto **já renderizado no seu navegador**, com o seu login e 
 ## Instalação
 
 1. Instale o [Tampermonkey](https://www.tampermonkey.net/) (Violentmonkey também serve).
-2. Abra o arquivo `resumir-pagina.user.js` no navegador. O Tampermonkey mostra a tela de instalação; clique em **Instalar**.
-   - Do disco: sirva a pasta com `python -m http.server 8765 --bind 127.0.0.1` e abra `http://127.0.0.1:8765/resumir-pagina.user.js`.
+2. Abra **[https://raw.githubusercontent.com/jusgador/ResumirPagina/main/resumir-pagina.user.js](https://raw.githubusercontent.com/jusgador/ResumirPagina/main/resumir-pagina.user.js)**. O Tampermonkey mostra a tela de instalação; clique em **Instalar**.
+
+### Atualizações
+
+O script traz `@updateURL` e `@downloadURL` apontando para o arquivo no GitHub (ramo `main`). O Tampermonkey e o Violentmonkey conferem esse endereço de tempos em tempos e atualizam sozinhos quando o `@version` sobe. Para atualizar na hora: ícone do Tampermonkey → *Painel* → *Procurar atualizações* (no Violentmonkey, o botão de atualizar do script).
+
+Quem instalou antes da 0.2.2 (por `http://127.0.0.1:8765/…`) precisa abrir o link acima uma vez. Nome e namespace são os mesmos, então a instalação vira uma atualização e as chaves e a configuração continuam lá.
+
+Para testar uma versão local antes de publicar, sirva a pasta com `python -m http.server 8765 --bind 127.0.0.1` e abra `http://127.0.0.1:8765/resumir-pagina.user.js`. A próxima atualização automática volta a puxar do GitHub, porque os endereços estão no cabeçalho.
 
 ## Configurar as chaves
 
@@ -134,11 +141,13 @@ A versão para celular é outro arquivo, independente: [`resumir-pagina-celular.
 | Parar ou refazer o resumo | **■** / **↻** |
 | Resposta cortada (conexão caiu) | **↻ Tentar de novo**, que refaz só o último turno |
 
+**Instalar:** com o Violentmonkey no Firefox do celular, abra **[https://raw.githubusercontent.com/jusgador/ResumirPagina/main/resumir-pagina-celular.user.js](https://raw.githubusercontent.com/jusgador/ResumirPagina/main/resumir-pagina-celular.user.js)** e toque em **Instalar**. As atualizações vêm sozinhas pelo mesmo endereço, como no desktop. Quem instalou antes da 0.1.4 pelo cabo USB precisa abrir o link uma vez.
+
 Também dá para abrir pelo menu do Violentmonkey (⋮ → Extensões → Violentmonkey → *Resumir esta página*).
 
 O painel ocupa a área visível da tela e acompanha o teclado. Em páginas sem versão para celular, ou com zoom, ele desfaz o zoom para manter o tamanho normal. Se você trocar de app durante uma resposta, o Android pode cortar a conexão; o texto que já chegou fica na tela.
 
-### Instalar e testar pelo cabo USB
+### Testar uma versão local pelo cabo USB
 
 1. No celular: em *Opções do desenvolvedor*, ligue a **Depuração USB**. No Firefox, em Configurações, ligue a **Depuração remota via USB**. Instale o Violentmonkey.
 2. No PC, sirva a pasta e ligue a porta do celular à do PC:
@@ -147,7 +156,7 @@ O painel ocupa a área visível da tela e acompanha o teclado. Em páginas sem v
    adb reverse tcp:8765 tcp:8765
    ```
    O `adb` fica em `%LOCALAPPDATA%\Android\Sdk\platform-tools`. A porta não é exposta na rede: o celular a alcança só pelo cabo.
-3. No Firefox do celular, abra `http://127.0.0.1:8765/resumir-pagina-celular.user.js`. O Violentmonkey mostra a tela de instalação. Para atualizar, abra o mesmo endereço de novo.
+3. No Firefox do celular, abra `http://127.0.0.1:8765/resumir-pagina-celular.user.js`. O Violentmonkey mostra a tela de instalação. Para atualizar, abra o mesmo endereço de novo. A atualização automática seguinte volta a puxar do GitHub.
 4. Para depurar, use a Firefox Developer Edition no PC: `about:debugging` → conecte o celular por USB → inspecione a aba. O console mostra, a cada resposta, quantos pedaços do streaming chegaram antes do fim (`[Resumir celular] …`). Se for 0, a resposta veio toda de uma vez. No Violentmonkey do Firefox Android, a resposta chega aos poucos (conferido em novembro de 2026, num Galaxy S23 Ultra).
 
 A página `test/pagina-teste-celular.html` funciona como a do desktop, com `GM_*` simulados: `http://127.0.0.1:8765/test/pagina-teste-celular.html`, no PC ou no celular. Uma chave `cair` simula a conexão caindo no meio da resposta.
@@ -156,4 +165,5 @@ A página `test/pagina-teste-celular.html` funciona como a do desktop, com `GM_*
 
 - `test/pagina-teste.html` roda o script fora do Tampermonkey, com `GM_*` simulados e respostas falsas no formato de streaming de cada provedor. Nada sai do computador e nada é cobrado. Sirva a pasta por HTTP e abra `http://127.0.0.1:8765/test/pagina-teste.html`. Uma chave `erro` simula chave recusada (401). Com a DeepSeek no nível **+ Web**, o simulador pede uma busca (com os argumentos chegando em pedaços, como no streaming real), responde pelo endpoint de busca, inclusive com um link `javascript:` que o painel deve mostrar como texto, e só então dá a resposta final.
 - Com o script instalado no Tampermonkey, a cópia instalada se desliga na página de teste (ela tem `<meta name="resumir-pagina-teste">`), para não haver dois painéis nem chamadas reais.
+- Publicar: o que entra no `main` chega a todos os navegadores instalados quando o `@version` sobe. Teste pela página de teste ou pelo servidor local antes de subir a versão.
 - Versões: nenhum número de versão contém 13 (depois de 0.12.x vem 0.14.0; depois de x.y.12 vem x.y.14).
