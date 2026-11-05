@@ -77,9 +77,19 @@ Os níveis são cumulativos: **+ Web** já inclui o conhecimento do modelo. Em �
 | **+ Conhecimento** | Usa a página e completa com o conhecimento do próprio modelo, numa seção "Além da página". O modelo tem data de corte e pode estar desatualizado | nenhum |
 | **+ Web** | Também pesquisa na web quando a pergunta pede informação atual ou que não está na página. As fontes vêm em links, numa seção "Na web", e as buscas feitas aparecem no fim da resposta | por busca (veja abaixo) |
 
-Por enquanto, a pesquisa na web só funciona com a **DeepSeek**; nos outros provedores o botão **+ Web** fica desativado.
+A pesquisa funciona nos quatro provedores, de dois jeitos. Em ⚙ → **Perguntas** você escolhe qual vale para Anthropic, OpenAI e Gemini; com a DeepSeek como provedor, a busca é sempre a dela.
 
-Como funciona com a DeepSeek: o script oferece ao modelo uma função `pesquisar_web`. Quando o modelo a chama, o script consulta o endpoint de busca da DeepSeek (`/v1/tools/search`), devolve até 6 resultados (título, URL, site, data e resumo) e o modelo continua a resposta. São no máximo **3 buscas por pergunta**. A busca custa US$ 0,75 por 1.000 (preço de novembro de 2026), e buscas que falham ou não acham nada não são cobradas. Os resultados entram como tokens de entrada.
+**Busca do próprio provedor** (padrão). Basta a chave do provedor. Ele pesquisa sozinho, no mesmo pedido, e o script só mostra as consultas e as fontes que vêm junto:
+
+| Provedor | Como pesquisa | Limite | Preço da busca (novembro de 2026) |
+|---|---|---|---|
+| Anthropic | ferramenta `web_search` (versão `web_search_20250305`, que vale para todos os modelos) | 3 buscas por pergunta (`max_uses`) | US$ 10 por 1.000, mais os resultados como tokens de entrada |
+| OpenAI | ferramenta `web_search` da **Responses API** (só no **+ Web**; os outros níveis continuam na Chat Completions) | 3 chamadas (`max_tool_calls`) | cerca de US$ 10 por 1.000 nos modelos com raciocínio, mais o conteúdo lido como tokens |
+| Gemini | grounding com a Pesquisa Google (`google_search`) | só pelo pedido no prompt | nos Gemini 3 em diante, 5.000 consultas grátis por mês e depois US$ 14 por 1.000; nos mais antigos, por pedido |
+
+Confira os preços na página de cada provedor: eles mudam. Na Anthropic, um administrador pode desligar a busca no Console; aí o pedido volta com erro 400. No Gemini, os links das fontes passam por um redirecionador do Google, e o título costuma ser só o domínio do site. Como o Gemini não diz qual fonte veio de qual consulta, o painel mostra as consultas juntas, numa entrada só.
+
+**Busca da DeepSeek** (sempre na DeepSeek; nos outros, se escolhida em ⚙). É a mais barata, mas exige também a chave da DeepSeek; sem ela, o **+ Web** fica desativado. O script oferece ao modelo uma função `pesquisar_web`, no formato de cada API. Quando o modelo a chama, o script consulta o endpoint de busca da DeepSeek (`/v1/tools/search`), devolve até 6 resultados (título, URL, site, data e resumo) e o modelo continua a resposta. São no máximo **3 buscas por pergunta**. A busca custa US$ 0,75 por 1.000 (preço de novembro de 2026), e buscas que falham ou não acham nada não são cobradas. Os resultados entram como tokens de entrada do modelo que responde. Para a DeepSeek vão a consulta e a sua pergunta, não a página.
 
 ## Modelos padrão
 
@@ -163,7 +173,8 @@ A página `test/pagina-teste-celular.html` funciona como a do desktop, com `GM_*
 
 ## Desenvolvimento
 
-- `test/pagina-teste.html` roda o script fora do Tampermonkey, com `GM_*` simulados e respostas falsas no formato de streaming de cada provedor. Nada sai do computador e nada é cobrado. Sirva a pasta por HTTP e abra `http://127.0.0.1:8765/test/pagina-teste.html`. Uma chave `erro` simula chave recusada (401). Com a DeepSeek no nível **+ Web**, o simulador pede uma busca (com os argumentos chegando em pedaços, como no streaming real), responde pelo endpoint de busca, inclusive com um link `javascript:` que o painel deve mostrar como texto, e só então dá a resposta final.
+- `test/pagina-teste.html` roda o script fora do Tampermonkey, com `GM_*` simulados e respostas falsas no formato de streaming de cada provedor. Nada sai do computador e nada é cobrado. Sirva a pasta por HTTP e abra `http://127.0.0.1:8765/test/pagina-teste.html`. Uma chave `erro` simula chave recusada (401). No nível **+ Web**, o simulador imita a busca de cada provedor: a nativa (Anthropic, Responses API da OpenAI e grounding do Gemini, com consultas e fontes no streaming) e a da DeepSeek (o modelo pede `pesquisar_web`, com os argumentos chegando em pedaços, como no streaming real, e só responde depois do resultado). As fontes trazem um link `javascript:`, que o painel deve mostrar como texto.
+- `node test/teste-busca-web.js` (ou `node test/teste-busca-web.js resumir-pagina-celular.user.js`) carrega o script no Node e confere, sem navegador e sem chamar API, os pedidos de cada provedor e a leitura do streaming nos dois modos de busca, inclusive a pausa `pause_turn` da Anthropic e o limite de 3 buscas.
 - Com o script instalado no Tampermonkey, a cópia instalada se desliga na página de teste (ela tem `<meta name="resumir-pagina-teste">`), para não haver dois painéis nem chamadas reais.
 - Publicar: o que entra no `main` chega a todos os navegadores instalados quando o `@version` sobe. Teste pela página de teste ou pelo servidor local antes de subir a versão.
 - Versões: nenhum número de versão contém 13 (depois de 0.12.x vem 0.14.0; depois de x.y.12 vem x.y.14).
