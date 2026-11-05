@@ -707,10 +707,20 @@
 
     // OpenAI Responses API (só com a busca nativa da OpenAI).
     function leitorResponses() {
-        const chamadas = [];   // web_search_call: { id, temFontes }
+        const chamadas = [];   // web_search_call: { id, fontes: [{ url, title }] }
         const citacoes = [];   // url_citation do texto
+        const titulos = {};    // título de cada URL citada (a lista de fontes da busca vem sem título)
         const vistas = new Set();
-        const fonte = (url, titulo) => ({ titulo: String(titulo || hostDe(url) || url), url: String(url), site: hostDe(url), data: '', resumo: '' });
+        const semConsulta = (u) => String(u).split(/[?#]/)[0].replace(/\/$/, '');
+        // Sem título, mostra o endereço encurtado (só o domínio repetiria o mesmo nome).
+        const urlCurta = (u) => {
+            try { const x = new URL(u); const t = hostDe(u) + x.pathname.replace(/\/$/, ''); return t.length > 70 ? t.slice(0, 69) + '…' : t; }
+            catch (e) { return String(u); }
+        };
+        const fonte = (url, titulo) => titulo
+            ? { titulo: String(titulo), url: String(url), site: hostDe(url), data: '', resumo: '' }
+            : { titulo: urlCurta(url), url: String(url), site: '', data: '', resumo: '' };
+        const comTitulos = (ch) => ch.fontes.map(s => fonte(s.url, s.title || titulos[semConsulta(s.url)]));
         return {
             evento(ev) {
                 const r = {};
@@ -720,23 +730,28 @@
                     const it = ev.item;
                     const a = it.action || {};
                     let ch = chamadas.find(x => x.id === it.id);
-                    if (!ch) { ch = { id: it.id, temFontes: false }; chamadas.push(ch); }
+                    if (!ch) { ch = { id: it.id, fontes: [] }; chamadas.push(ch); }
                     const b = { id: it.id };
                     if (a.type === 'search' && (a.query || (a.queries && a.queries[0]))) b.consulta = String(a.query || a.queries.join(' · '));
                     else if (a.type === 'open_page' && a.url) b.consulta = 'abrir ' + a.url;
                     else if (a.type === 'find_in_page' && a.pattern) b.consulta = `procurar “${a.pattern}” em ${a.url || 'página'}`;
                     if (Array.isArray(a.sources) && a.sources.length) {
-                        ch.temFontes = true;
-                        b.resultados = a.sources.filter(s => s && s.url).slice(0, 10).map(s => fonte(s.url, s.title));
+                        const urls = new Set();
+                        ch.fontes = a.sources.filter(s => s && s.url && !urls.has(semConsulta(s.url)) && urls.add(semConsulta(s.url))).slice(0, 10);
+                        b.resultados = comTitulos(ch);
                     }
                     if (t === 'response.output_item.done' && it.status === 'failed') b.erro = 'A busca falhou.';
                     if (b.consulta || b.resultados || b.erro || t === 'response.output_item.added') r.buscas = [b];
                 } else if (t === 'response.output_text.annotation.added' && ev.annotation && ev.annotation.type === 'url_citation') {
                     const a = ev.annotation;
-                    if (a.url && !vistas.has(a.url)) { vistas.add(a.url); citacoes.push(fonte(a.url, a.title)); }
+                    if (a.url && a.title) titulos[semConsulta(a.url)] = a.title;
+                    if (a.url && !vistas.has(semConsulta(a.url))) { vistas.add(semConsulta(a.url)); citacoes.push(fonte(a.url, a.title)); }
                 } else if (t === 'response.completed') {
-                    // Sem a lista de fontes de cada busca, mostra as citadas no texto.
-                    if (citacoes.length && !chamadas.some(x => x.temFontes)) {
+                    if (chamadas.some(x => x.fontes.length)) {
+                        // Põe nas fontes de cada busca os títulos que vieram nas citações.
+                        r.buscas = chamadas.filter(x => x.fontes.length).map(x => ({ id: x.id, resultados: comTitulos(x) }));
+                    } else if (citacoes.length) {
+                        // Sem a lista de fontes de cada busca, mostra as citadas no texto.
                         r.buscas = [{ id: chamadas.length ? chamadas[chamadas.length - 1].id : 'citacoes', resultados: citacoes.slice(0, 10) }];
                     }
                 } else if (t === 'response.incomplete') {

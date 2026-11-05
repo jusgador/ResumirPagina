@@ -17,7 +17,7 @@ const gancho = `
     globalThis.__rp = {
         definir(nome, valor) { eval(nome + ' = valor'); },
         ler(nome) { return eval(nome); },
-        montarPedido, criarLeitor, mensagensDeResultado, modoBusca, suportaBusca, responder,
+        montarPedido, criarLeitor, mensagensDeResultado, modoBusca, suportaBusca, responder, pararPedido, copiar,
     };
 })();`;
 const fimIIFE = codigo.lastIndexOf('})();');
@@ -27,7 +27,9 @@ codigo = codigo.slice(0, fimIIFE) + gancho + codigo.slice(fimIIFE + 5);
 // ---------------- ambiente simulado ----------------
 const fila = [];        // respostas esperadas, na ordem dos pedidos
 const pedidos = [];     // pedidos feitos: { url, body }
+const PENDENTE = { pendente: true };
 let armazenado = '{}';
+let copiado = '';
 const elementoFalso = () => new Proxy(function () {}, {
     get: (alvo, k) => (k === Symbol.toPrimitive ? () => '' : elementoFalso()),
     apply: () => elementoFalso(),
@@ -42,21 +44,27 @@ const contexto = {
     document: {
         querySelector: () => null, createElement: () => elementoFalso(), documentElement: elementoFalso(),
         visibilityState: 'visible', addEventListener() {}, removeEventListener() {},
+        title: 'Página de exemplo',
     },
     location: { href: 'https://exemplo.test/pagina' },
     GM_getValue: () => armazenado,
     GM_setValue: (k, v) => { armazenado = v; },
-    GM_setClipboard() {},
+    GM_setClipboard(t) { copiado = t; },
+    // Cada item da fila é a resposta do próximo pedido: texto SSE, objeto JSON,
+    // { status, corpo } (erro HTTP) ou PENDENTE (só termina se for abortado).
     GM_xmlhttpRequest(op) {
         const corpo = op.data ? JSON.parse(op.data) : undefined;
         pedidos.push({ url: op.url, body: corpo });
         const resp = fila.shift();
         if (!resp) throw new Error('pedido inesperado: ' + op.url);
+        if (resp === PENDENTE) return { abort() { op.onabort && op.onabort(); } };
         Promise.resolve().then(() => {
             if (typeof resp === 'string') {
                 const r = { status: 200, responseText: resp };
                 if (op.onprogress) op.onprogress(r);
                 op.onload(r);
+            } else if (resp.status) {
+                op.onload({ status: resp.status, responseText: resp.corpo });
             } else {
                 op.onload({ status: 200, responseText: JSON.stringify(resp) });
             }
@@ -191,9 +199,13 @@ teste('OpenAI nativa (Responses API)', async () => {
         { type: 'response.created', response: {} },
         { type: 'response.output_item.added', item: { type: 'web_search_call', id: 'ws1', status: 'in_progress' } },
         { type: 'response.output_item.done', item: { type: 'web_search_call', id: 'ws1', status: 'completed',
-            action: { type: 'search', query: 'notícias', sources: [{ type: 'url', url: 'https://g1.test/n' }] } } },
+            action: { type: 'search', query: 'notícias', sources: [
+                { type: 'url', url: 'https://g1.test/n' },
+                { type: 'url', url: 'https://g1.test/n?ref=x' },
+                { type: 'url', url: 'https://www.g1.test/outra/materia/' },
+            ] } } },
         { type: 'response.output_text.delta', delta: 'Saiu X ' },
-        { type: 'response.output_text.annotation.added', annotation: { type: 'url_citation', url: 'https://g1.test/n', title: 'G1' } },
+        { type: 'response.output_text.annotation.added', annotation: { type: 'url_citation', url: 'https://g1.test/n?utm_source=openai', title: 'G1' } },
         { type: 'response.output_text.delta', delta: '(G1).' },
         { type: 'response.completed', response: {} },
     ]));
@@ -207,6 +219,10 @@ teste('OpenAI nativa (Responses API)', async () => {
     assert.strictEqual(r.buscas.length, 1);
     assert.strictEqual(r.buscas[0].consulta, 'notícias');
     assert.strictEqual(r.buscas[0].resultados[0].url, 'https://g1.test/n');
+    // Fontes repetidas (só a consulta muda) saem; o título vem da citação ou,
+    // sem ela, é o endereço encurtado, em vez de repetir o domínio.
+    assert.deepStrictEqual(json(r.buscas[0].resultados.map(x => [x.titulo, x.site])),
+        [['G1', 'g1.test'], ['g1.test/outra/materia', '']]);
 });
 
 teste('OpenAI nativa sem lista de fontes usa as citações', async () => {
@@ -321,6 +337,61 @@ teste('Resumo (primeiro turno) nunca pesquisa', async () => {
     fila.push(sse([{ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'R' } }]));
     await rp.responder();
     assert.strictEqual(pedidos[0].body.tools, undefined);
+});
+
+// ---------------- erros, parar e copiar ----------------
+const ate = async (cond) => { for (let i = 0; i < 100 && !cond(); i++) await new Promise(r => setImmediate(r)); };
+
+teste('Parar no meio da busca da DeepSeek', async () => {
+    preparar('anthropic', 'deepseek');
+    fila.push(sse([
+        { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: 'tu1', name: 'pesquisar_web', input: {} } },
+        { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"consulta":"x"}' } },
+        { type: 'content_block_stop', index: 0 },
+        { type: 'message_delta', delta: { stop_reason: 'tool_use' } },
+    ]));
+    fila.push(PENDENTE);
+    const fim = rp.responder();
+    await ate(() => pedidos.length === 2);
+    assert.strictEqual(pedidos[1].url, 'https://api.deepseek.com/v1/tools/search');
+    rp.pararPedido();
+    await fim;
+    const r = resposta();
+    assert.strictEqual(r.aviso, 'Resposta interrompida.');
+    assert.strictEqual(r.erro, undefined);
+    assert.strictEqual(rp.ler('pedidoAtual'), null);
+});
+
+teste('Parar no meio da resposta com busca nativa', async () => {
+    preparar('gemini');
+    fila.push(PENDENTE);
+    const fim = rp.responder();
+    await ate(() => pedidos.length === 1);
+    rp.pararPedido();
+    await fim;
+    assert.strictEqual(resposta().aviso, 'Resposta interrompida.');
+});
+
+teste('Busca desligada na conta: erro 400 com a dica', async () => {
+    preparar('anthropic');
+    fila.push({ status: 400, corpo: JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Web search is not enabled for this organization.' } }) });
+    await rp.responder();
+    const r = resposta();
+    assert.match(r.erro, /erro 400/);
+    assert.match(r.erro, /pesquisa na web pode estar desligada/);
+});
+
+teste('Copiar em Markdown inclui as buscas', async () => {
+    preparar('anthropic');
+    const c = rp.ler('estado').conversa;
+    c.push({ papel: 'assistant', texto: 'Hoje saiu X.', buscas: [
+        { consulta: 'notícias hoje', resultados: [{ titulo: 'Jornal', url: 'https://jornal.test/a' }], erro: '' },
+        { consulta: '', resultados: [], erro: 'A busca falhou (unavailable).' },
+    ] });
+    copiado = '';
+    rp.copiar();
+    assert.match(copiado, /^# Página de exemplo\nhttps:\/\/exemplo\.test\/pagina/);
+    assert.ok(copiado.includes('_Buscas na web:_\n- notícias hoje: [Jornal](https://jornal.test/a)\n- busca na web: A busca falhou (unavailable).'), copiado);
 });
 
 (async () => {
